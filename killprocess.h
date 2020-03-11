@@ -1,9 +1,5 @@
 #pragma once
-#include <Windows.h>
-#include <process.h>
-#include <Tlhelp32.h>
-#include <winbase.h>
-#include <string.h>
+#include <TlHelp32.h>
 
 void killProcessByName(const wchar_t* filename) {
 	HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
