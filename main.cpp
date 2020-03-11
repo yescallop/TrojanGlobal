@@ -1,5 +1,4 @@
-﻿#include "proxy.h"
-#include "killprocess.h"
+﻿#include "winutils.h"
 #include <stdio.h>
 
 const LPWSTR SERVER = (LPWSTR)L"http://127.0.0.1:1084";
