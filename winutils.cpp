@@ -1,37 +1,54 @@
 #include "winutils.h"
+#include <TlHelp32.h>
+#include <WinInet.h>
+#include <stdio.h>
 
 void killProcessByName(const wchar_t* filename) {
-	HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
-	PROCESSENTRY32 pEntry;
+	HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapShot == INVALID_HANDLE_VALUE) return;
+	PROCESSENTRY32 pEntry = {};
 	pEntry.dwSize = sizeof(pEntry);
-	BOOL hRes = Process32First(hSnapShot, &pEntry);
-	while (hRes) {
+	if (!Process32First(hSnapShot, &pEntry)) return;
+	do {
 		if (wcscmp(pEntry.szExeFile, filename) == 0) {
-			HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
-				(DWORD)pEntry.th32ProcessID);
-			if (hProcess != NULL) {
+			HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE,
+				pEntry.th32ProcessID);
+			if (hProcess != nullptr) {
 				TerminateProcess(hProcess, 9);
 				CloseHandle(hProcess);
 			}
 		}
-		hRes = Process32Next(hSnapShot, &pEntry);
-	}
+	} while (Process32Next(hSnapShot, &pEntry));
 	CloseHandle(hSnapShot);
 }
 
+void printError(const char* what) {
+	DWORD errorId = GetLastError();
+	LPWSTR lpBuffer = nullptr;
+	if (errorId == 0 ||
+		!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			nullptr, errorId, MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT), (LPWSTR)&lpBuffer, 0, nullptr)) {
+		printf("%s failed: No message available", what);
+	}
+	else {
+		printf("%s failed: %S", what, lpBuffer);
+		LocalFree(lpBuffer);
+	}
+}
+
 BOOL refreshOptions(INTERNET_PER_CONN_OPTION_LIST list) {
-	return InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &list, sizeof(list)) &
-		InternetSetOption(nullptr, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, nullptr, 0) &
+	return InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &list, sizeof(list)) &&
+		InternetSetOption(nullptr, INTERNET_OPTION_PROXY_SETTINGS_CHANGED, nullptr, 0) &&
 		InternetSetOption(nullptr, INTERNET_OPTION_REFRESH, nullptr, 0);
 }
 
-BOOL setProxy(LPWSTR server, LPWSTR bypass) {
+BOOL setProxy(const wchar_t* server, const wchar_t* bypass) {
 	INTERNET_PER_CONN_OPTION_LIST list = {};
 
 	// Fill the list structure.
 	list.dwSize = sizeof(list);
 
-	// NULL == LAN, otherwise connectoid name.
+	// nullptr == LAN, otherwise connectoid name.
 	list.pszConnection = nullptr;
 
 	// Set three options.
@@ -46,11 +63,11 @@ BOOL setProxy(LPWSTR server, LPWSTR bypass) {
 
 	// Set proxy name.
 	options[1].dwOption = INTERNET_PER_CONN_PROXY_SERVER;
-	options[1].Value.pszValue = server;
+	options[1].Value.pszValue = const_cast<wchar_t*>(server);
 
 	// Set proxy override.
 	options[2].dwOption = INTERNET_PER_CONN_PROXY_BYPASS;
-	options[2].Value.pszValue = bypass;
+	options[2].Value.pszValue = const_cast<wchar_t*>(bypass);
 
 	// Set the options on the connection.
 	return refreshOptions(list);

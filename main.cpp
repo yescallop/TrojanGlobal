@@ -1,8 +1,8 @@
 ﻿#include "winutils.h"
 #include <stdio.h>
 
-const LPWSTR SERVER = (LPWSTR)L"http://127.0.0.1:1084";
-const LPWSTR BYPASS_LIST = (LPWSTR)L"localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;172.32.*;192.168.*;<local>";
+const wchar_t* SERVER = L"http://127.0.0.1:1084";
+const wchar_t* BYPASS = L"localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;172.32.*;192.168.*;<local>";
 
 HANDLE handles[2] = {};
 BOOL reseted = FALSE;
@@ -21,14 +21,14 @@ BOOL WINAPI ctrlHandler(DWORD dwCtrlType) {
 int main() {
 	HANDLE hJob = CreateJobObject(nullptr, nullptr);
 	if (hJob == nullptr) {
-		printf("CreateJobObject failed: error %d\n", GetLastError());
+		printError("CreateJobObject");
 		return 1;
 	}
 
 	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {};
 	jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 	if (!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli))) {
-		printf("SetInformationJobObject failed: error %d\n", GetLastError());
+		printError("SetInformationJobObject");
 		return 1;
 	}
 
@@ -42,12 +42,12 @@ int main() {
 		0, nullptr, nullptr,
 		&si, &pi
 	)) {
-		printf("CreateProcess failed: error %d\n", GetLastError());
+		printError("Starting trojan");
 		return 1;
 	}
 	CloseHandle(pi.hThread);
 	if (!AssignProcessToJobObject(hJob, pi.hProcess)) {
-		printf("AssignProcessToJobObject failed: error %d\n", GetLastError());
+		printError("AssignProcessToJobObject");
 		return 1;
 	}
 	handles[0] = pi.hProcess;
@@ -63,25 +63,25 @@ int main() {
 		0, nullptr, nullptr,
 		&si, &pi
 	)) {
-		printf("CreateProcess failed: error %d\n", GetLastError());
+		printError("Starting Privoxy");
 		return 1;
 	}
 	CloseHandle(pi.hThread);
 	if (!AssignProcessToJobObject(hJob, pi.hProcess)) {
-		printf("AssignProcessToJobObject failed: error %d\n", GetLastError());
+		printError("AssignProcessToJobObject");
 		return 1;
 	}
 	handles[1] = pi.hProcess;
 
 	// Set global proxy
-	if (!setProxy(SERVER, BYPASS_LIST)) {
-		printf("setProxy failed: error %d\n", GetLastError());
+	if (!setProxy(SERVER, BYPASS)) {
+		printError("setProxy");
 		return 1;
 	}
 
 	// Set console ctrl handler
 	if (!SetConsoleCtrlHandler(ctrlHandler, TRUE)) {
-		printf("SetConsoleCtrlHandler failed: error %d\n", GetLastError());
+		printError("SetConsoleCtrlHandler");
 		return 1;
 	}
 

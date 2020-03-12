@@ -1,12 +1,10 @@
 #pragma once
 #include <Windows.h>
-#include <TlHelp32.h>
-#include <WinInet.h>
 
 void killProcessByName(const wchar_t* filename);
 
-BOOL refreshOptions(INTERNET_PER_CONN_OPTION_LIST list);
+void printError(const char* what);
 
-BOOL setProxy(LPWSTR server, LPWSTR bypass);
+BOOL setProxy(const wchar_t* server, const wchar_t* bypass);
 
 BOOL resetProxy();
