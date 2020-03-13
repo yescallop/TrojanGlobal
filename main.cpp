@@ -8,14 +8,11 @@ HANDLE handles[2] = {};
 BOOL reseted = FALSE;
 
 BOOL WINAPI ctrlHandler(DWORD dwCtrlType) {
-	if (dwCtrlType == CTRL_CLOSE_EVENT || dwCtrlType == CTRL_C_EVENT) {
-		if (!reseted) {
-			resetProxy();
-			reseted = TRUE;
-		}
-		return TRUE;
+	if (!reseted) {
+		resetProxy();
+		reseted = TRUE;
 	}
-	return FALSE;
+	return TRUE;
 }
 
 int main() {
